@@ -13,19 +13,23 @@ import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-nat
 import '@babylonjs/loaders';
 import Slider from '@react-native-community/slider';
 import AR from './components/AR';
+const URL_LIST = [
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb',
+  'https://playground.babylonjs.com/scenes/skull.babylon',
+  'https://raw.githubusercontent.com/wallburners/test/main/winged_victory_of_samothrace.glb',
+];
 
 const App = () => {
   const [toggleScreen, setToggleScreen] = useState(false);
-  //const URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb';
-  //const URL = 'https://raw.githubusercontent.com/wallburners/test/main/winged_victory_of_samothrace.glb';
-  const URL = 'https://playground.babylonjs.com/scenes/skull.babylon';
+  const [urlIdx, setUrlIdx] = useState(0);
+  const nextUrl = (urlIdx + 1) % URL_LIST.length;
 
   return (
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={{flex: 1, backgroundColor: 'white'}}>
         { !toggleScreen &&
-          <AR style={{flex: 1}} src={URL} />
+          <AR style={{flex: 1}} src={URL_LIST[urlIdx]} />
         }
         { toggleScreen &&
           <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
@@ -34,6 +38,11 @@ const App = () => {
           </View>
         }
         <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />
+       { !toggleScreen
+         ? <Text>{URL_LIST[urlIdx]}</Text>
+         : <Button title={`Switch to ${URL_LIST[nextUrl]}`}
+                   onPress={() => { setUrlIdx(nextUrl); }} />
+       }
       </SafeAreaView>
     </>
   );
