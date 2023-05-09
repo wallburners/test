@@ -12,15 +12,19 @@ import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-nat
 import {
   WebXRHitTest,
   Space,
+  Plane,
   Scene,
   Vector3,
   ArcRotateCamera,
   PointerDragBehavior,
+  SixDofDragBehavior,
   Camera,
   WebXRSessionManager,
-  SphereBuilder,
+  MeshBuilder,
+  Mesh,
   SceneLoader,
   TransformNode,
+  StandardMaterial,
   DeviceSourceManager,
   DeviceType,
   PointerInput,
@@ -29,6 +33,36 @@ import {
   IMouseEvent,
 } from '@babylonjs/core';
 import '@babylonjs/loaders';
+
+function makeNonPickable(mesh) {
+  mesh.isPickable = false;
+  mesh.getChildMeshes().forEach((sm) => { sm.isPickable = false; });
+}
+
+function createBoundingBox(mesh, scene) {
+  const { min, max } = mesh.getHierarchyBoundingVectors();
+  console.log("min", min);
+  console.log("max", max);
+  const width = max.x - min.x;
+  const height = max.y - min.y;
+  const depth =  max.z - min.z;
+  console.log(width, height, depth);
+  /*const sourcePlane = Plane.FromPositionAndNormal(
+    Vector3.Zero(),
+    new Vector3(0, -1, 0.2),
+  );
+  const box = MeshBuilder.CreatePlane("box", {
+    sourcePlane,
+    size: width * 2,
+    sideOrientation: Mesh.DOUBLESIDE,
+  }, scene);*/
+  const box = MeshBuilder.CreateBox("box", { width, height, depth }, scene);
+  box.material = new StandardMaterial("mat", scene);
+  box.material.alpha = 0.1;
+  console.log(min);
+  return { box, scale: 0.4 / height };
+}
+
 
 const AR = (props) => {
   const engine = useEngine();
@@ -66,16 +100,28 @@ const AR = (props) => {
           const rootNode = new TransformNode('Root Container', scene);
           setRootNode(rootNode);
     
-          const transformContainer = new TransformNode('Transform Container', scene);
-          transformContainer.parent = rootNode;
           const cameraRay = scene.activeCamera.getForwardRay(1);
           rootNode.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length));
+          console.log(cameraRay);
           SceneLoader.ImportMeshAsync('', props.src).then((result) => {
             const mesh = result.meshes[0];
-            mesh.parent = transformContainer;
-            rootNode.scaling.scaleInPlace(0.1);
+            mesh.parent = rootNode;
+            makeNonPickable(mesh);
+            const { box, scale } = createBoundingBox(mesh, scene);
+            box.parent = rootNode;
+            rootNode.scaling.scaleInPlace(scale);
             const pointerDragBehavior = new PointerDragBehavior({});
-            mesh.addBehavior(pointerDragBehavior);
+            box.addBehavior(pointerDragBehavior);
+            pointerDragBehavior.onDragStartObservable.add((event) => {
+              box.material.alpha = 0.7;
+            });
+            pointerDragBehavior.onDragObservable.add((event) => {
+              mesh.position = box.position;
+              box.position = mesh.position;
+            });
+            pointerDragBehavior.onDragEndObservable.add((event) => {
+              box.material.alpha = 0;
+            });
             setImportOK(true);
           });
         });
