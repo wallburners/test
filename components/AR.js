@@ -39,6 +39,15 @@ function makeNonPickable(mesh) {
   mesh.getChildMeshes().forEach((sm) => { sm.isPickable = false; });
 }
 
+function resyncBox(mesh, box) {
+  const { min, max } = mesh.getHierarchyBoundingVectors();
+  box.setAbsolutePosition(new Vector3(
+    (min.x + max.x) / 2, 
+    (min.y + max.y) / 2,
+    (min.z + max.z) / 2,
+  ));
+}
+
 function createBoundingBox(mesh, scene) {
   const { min, max } = mesh.getHierarchyBoundingVectors();
   console.log("min", min);
@@ -47,20 +56,15 @@ function createBoundingBox(mesh, scene) {
   const height = max.y - min.y;
   const depth =  max.z - min.z;
   console.log(width, height, depth);
-  /*const sourcePlane = Plane.FromPositionAndNormal(
-    Vector3.Zero(),
-    new Vector3(0, -1, 0.2),
-  );
-  const box = MeshBuilder.CreatePlane("box", {
-    sourcePlane,
-    size: width * 2,
-    sideOrientation: Mesh.DOUBLESIDE,
-  }, scene);*/
   const box = MeshBuilder.CreateBox("box", { width, height, depth }, scene);
   box.material = new StandardMaterial("mat", scene);
-  box.material.alpha = 0.1;
-  console.log(min);
-  return { box, scale: 0.4 / height };
+  box.material.alpha = 0.5;
+  box.setAbsolutePosition(new Vector3(
+    (min.x + max.x) / 2, 
+    (min.y + max.y) / 2,
+    (min.z + max.z) / 2,
+  ));
+  return { box, scale: 1 / height };
 }
 
 
@@ -101,27 +105,32 @@ const AR = (props) => {
           setRootNode(rootNode);
     
           const cameraRay = scene.activeCamera.getForwardRay(1);
-          rootNode.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length));
-          console.log(cameraRay);
+          console.log("cameraRay", cameraRay);
           SceneLoader.ImportMeshAsync('', props.src).then((result) => {
             const mesh = result.meshes[0];
             mesh.parent = rootNode;
             makeNonPickable(mesh);
             const { box, scale } = createBoundingBox(mesh, scene);
             box.parent = rootNode;
+            rootNode.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length * 2));
             rootNode.scaling.scaleInPlace(scale);
             const pointerDragBehavior = new PointerDragBehavior({});
             box.addBehavior(pointerDragBehavior);
             pointerDragBehavior.onDragStartObservable.add((event) => {
-              box.material.alpha = 0.7;
+              box.material.alpha = 0.5;
             });
             pointerDragBehavior.onDragObservable.add((event) => {
-              mesh.position = box.position;
-              box.position = mesh.position;
+              mesh.setAbsolutePosition(event.delta.add(mesh.getAbsolutePosition()));
             });
             pointerDragBehavior.onDragEndObservable.add((event) => {
               box.material.alpha = 0;
+              resyncBox(mesh, box);
             });
+            scene.onPointerDown = () => {
+              const { min, max } = mesh.getHierarchyBoundingVectors();
+              console.log("mesh", mesh.getAbsolutePosition());
+              console.log("box", box.getAbsolutePosition());
+            };
             setImportOK(true);
           });
         });
