@@ -28,8 +28,11 @@ const App = () => {
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={{flex: 1, backgroundColor: 'white'}}>
-        { !toggleScreen &&
-          <AR style={{flex: 1}} src={URL_LIST[urlIdx]} />
+        <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />
+        { !toggleScreen
+          ? <Text>{URL_LIST[urlIdx]}</Text>
+          : <Button title={`Switch to ${URL_LIST[nextUrl]}`}
+                    onPress={() => { setUrlIdx(nextUrl); }} />
         }
         { toggleScreen &&
           <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
@@ -37,12 +40,9 @@ const App = () => {
             <Text style={{fontSize: 12}}>Engine has been disposed, and will be recreated.</Text>
           </View>
         }
-        <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />
-       { !toggleScreen
-         ? <Text>{URL_LIST[urlIdx]}</Text>
-         : <Button title={`Switch to ${URL_LIST[nextUrl]}`}
-                   onPress={() => { setUrlIdx(nextUrl); }} />
-       }
+        { !toggleScreen &&
+          <AR style={{flex: 1}} src={URL_LIST[urlIdx]} />
+        }
       </SafeAreaView>
     </>
   );
